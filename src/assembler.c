@@ -136,7 +136,7 @@ const InstructionDef instruction_table[] = {
     {"FLSH",    0x6E, FORMAT_S, 0, {}, "Flush state"},
     {"HALT",    0x6F, FORMAT_S, 0, {}, "Halt"},
 
-    /* 0x70-0x7F: Security/Hardware/Display */
+    /* 0x70-0x7F: Security/Hardware/Display/Extensions */
     {"TAINT",   0x70, FORMAT_RR, 2, {OPERAND_REG, OPERAND_REG}, "Apply taint"},
     {"UNTAINT", 0x71, FORMAT_RR, 2, {OPERAND_REG, OPERAND_REG}, "Remove taint"},
     {"CPYT",    0x72, FORMAT_RR, 2, {OPERAND_REG, OPERAND_REG}, "Copy taint"},
@@ -153,6 +153,45 @@ const InstructionDef instruction_table[] = {
     {"PMU",     0x7D, FORMAT_S, 2, {OPERAND_IMM, OPERAND_IMM}, "Performance monitor"},
     {"EXT",     0x7E, FORMAT_S, 2, {OPERAND_IMM, OPERAND_IMM}, "Extended instruction"},
     {"CUSTOM",  0x7F, FORMAT_S, 2, {OPERAND_IMM, OPERAND_IMM}, "Custom opcode"},
+
+    /* Floating-point extension (opcode 0x7E) */
+    {"FADD",    0x7E, FORMAT_F, 3, {OPERAND_FREG, OPERAND_FREG, OPERAND_FREG}, "Float add"},
+    {"FSUB",    0x7E, FORMAT_F, 3, {OPERAND_FREG, OPERAND_FREG, OPERAND_FREG}, "Float subtract"},
+    {"FMUL",    0x7E, FORMAT_F, 3, {OPERAND_FREG, OPERAND_FREG, OPERAND_FREG}, "Float multiply"},
+    {"FDIV",    0x7E, FORMAT_F, 3, {OPERAND_FREG, OPERAND_FREG, OPERAND_FREG}, "Float divide"},
+    {"FNEG",    0x7E, FORMAT_F, 2, {OPERAND_FREG, OPERAND_FREG}, "Float negate"},
+    {"FABS",    0x7E, FORMAT_F, 2, {OPERAND_FREG, OPERAND_FREG}, "Float absolute"},
+    {"FSQRT",   0x7E, FORMAT_F, 2, {OPERAND_FREG, OPERAND_FREG}, "Float square root"},
+    {"FMIN",    0x7E, FORMAT_F, 3, {OPERAND_FREG, OPERAND_FREG, OPERAND_FREG}, "Float minimum"},
+    {"FMAX",    0x7E, FORMAT_F, 3, {OPERAND_FREG, OPERAND_FREG, OPERAND_FREG}, "Float maximum"},
+    {"FCMP",    0x7E, FORMAT_F, 3, {OPERAND_FREG, OPERAND_FREG, OPERAND_FREG}, "Float compare"},
+    {"ITOF",    0x7E, FORMAT_F, 2, {OPERAND_FREG, OPERAND_REG}, "Integer to float"},
+    {"FTOI",    0x7E, FORMAT_F, 2, {OPERAND_REG, OPERAND_FREG}, "Float to integer"},
+    {"FCVT",    0x7E, FORMAT_F, 2, {OPERAND_FREG, OPERAND_FREG}, "Float convert"},
+    {"FMADD",   0x7E, FORMAT_F, 3, {OPERAND_FREG, OPERAND_FREG, OPERAND_FREG}, "Fused multiply-add"},
+    {"FMSUB",   0x7E, FORMAT_F, 3, {OPERAND_FREG, OPERAND_FREG, OPERAND_FREG}, "Fused multiply-subtract"},
+    {"FROUND",  0x7E, FORMAT_F, 2, {OPERAND_FREG, OPERAND_FREG}, "Float round"},
+
+    /* Atomic extension (opcode 0x7A) */
+    {"CAS",     0x7A, FORMAT_R, 3, {OPERAND_REG, OPERAND_REG, OPERAND_REG}, "Compare and swap"},
+    {"XCHG",    0x7A, FORMAT_R, 2, {OPERAND_REG, OPERAND_REG}, "Atomic exchange"},
+    {"ATADD",   0x7A, FORMAT_R, 3, {OPERAND_REG, OPERAND_REG, OPERAND_REG}, "Atomic add"},
+    {"ATSUB",   0x7A, FORMAT_R, 3, {OPERAND_REG, OPERAND_REG, OPERAND_REG}, "Atomic subtract"},
+    {"ATAND",   0x7A, FORMAT_R, 3, {OPERAND_REG, OPERAND_REG, OPERAND_REG}, "Atomic AND"},
+    {"ATOR",    0x7A, FORMAT_R, 3, {OPERAND_REG, OPERAND_REG, OPERAND_REG}, "Atomic OR"},
+    {"ATXOR",   0x7A, FORMAT_R, 3, {OPERAND_REG, OPERAND_REG, OPERAND_REG}, "Atomic XOR"},
+    {"LL",      0x7A, FORMAT_M, 2, {OPERAND_REG, OPERAND_ADDR}, "Load-linked"},
+    {"SC",      0x7A, FORMAT_M, 2, {OPERAND_REG, OPERAND_ADDR}, "Store-conditional"},
+
+    /* Display extension (opcode 0x7B) */
+    {"DISP_CLEAR",  0x7B, FORMAT_S, 0, {}, "Display clear"},
+    {"DISP_FLUSH",  0x7B, FORMAT_S, 0, {}, "Display flush"},
+    {"DISP_VSYNC",  0x7B, FORMAT_S, 0, {}, "Display vsync"},
+    {"DISP_SETMODE",0x7B, FORMAT_S, 1, {OPERAND_IMM}, "Display set mode"},
+    {"DISP_GETMODE",0x7B, FORMAT_S, 1, {OPERAND_REG}, "Display get mode"},
+    {"DISP_CURSOR", 0x7B, FORMAT_S, 1, {OPERAND_IMM}, "Display cursor"},
+    {"DISP_FBBASE", 0x7B, FORMAT_S, 1, {OPERAND_REG}, "Display framebuffer base"},
+    {"DISP_FBINFO", 0x7B, FORMAT_S, 1, {OPERAND_REG}, "Display framebuffer info"},
 };
 
 const size_t instruction_count = sizeof(instruction_table) / sizeof(InstructionDef);
@@ -246,10 +285,11 @@ bool is_register(const char *str, uint8_t *reg) {
     if (str[0] != 'R' && str[0] != 'r') return false;
     
     /* Aliases */
-    if (strcmp(str, "ZERO") == 0 || strcmp(str, "zero") == 0) { *reg = 0; return true; }
-    if (strcmp(str, "SP") == 0 || strcmp(str, "sp") == 0) { *reg = 29; return true; }
-    if (strcmp(str, "LR") == 0 || strcmp(str, "lr") == 0) { *reg = 30; return true; }
-    if (strcmp(str, "FP") == 0 || strcmp(str, "fp") == 0) { *reg = 28; return true; }
+    if (strcasecmp(str, "ZERO") == 0) { *reg = 0; return true; }
+    if (strcasecmp(str, "SP") == 0) { *reg = 29; return true; }
+    if (strcasecmp(str, "LR") == 0) { *reg = 30; return true; }
+    if (strcasecmp(str, "FP") == 0) { *reg = 28; return true; }
+    if (strcasecmp(str, "PC") == 0) { *reg = 31; return true; }
     
     /* Numeric */
     int r = atoi(str + 1);
@@ -436,7 +476,7 @@ uint64_t encode_instruction(const ParsedInstruction *instr, uint64_t pc, SymbolT
         case FORMAT_RR: {
             /* opcode(7) | Rd(5) | Rs1(5) | Func(5) | reserved(42) */
             uint8_t rd = instr->operands[0].value.reg;
-            uint8_t rs1 = instr->operands[1].value.reg;
+            uint8_t rs1 = (instr->operand_count > 1) ? instr->operands[1].value.reg : 0;
             encoded |= ((uint64_t)rd & 0x1F) << 52;
             encoded |= ((uint64_t)rs1 & 0x1F) << 47;
             break;
@@ -493,31 +533,50 @@ uint64_t encode_instruction(const ParsedInstruction *instr, uint64_t pc, SymbolT
         }
         
         case FORMAT_J: {
-            /* opcode(7) | offset(57) */
-            int64_t offset = 0;
-            
-            if (instr->operands[instr->operand_count - 1].type == OPERAND_LABEL) {
-                uint64_t label_addr;
-                if (symbol_table_lookup(symbols, instr->operands[instr->operand_count - 1].value.label, &label_addr)) {
-                    offset = (int64_t)(label_addr - (pc + 8)) / 8;  /* PC-relative */
+            /* For JAL with Rd: opcode(7) | Rd(5) | offset(50) */
+            /* For JMP/CALL: opcode(7) | offset(57) */
+            if (instr->operand_count > 1 && instr->operands[0].type == OPERAND_REG) {
+                /* JAL Rd, label format */
+                uint8_t rd = instr->operands[0].value.reg;
+                int64_t offset = 0;
+                if (instr->operands[1].type == OPERAND_LABEL) {
+                    uint64_t label_addr;
+                    if (symbol_table_lookup(symbols, instr->operands[1].value.label, &label_addr)) {
+                        offset = (int64_t)(label_addr - (pc + 8)) / 8;  /* PC-relative */
+                    }
                 }
+                encoded |= ((uint64_t)rd & 0x1F) << 52;
+                encoded |= ((uint64_t)offset & 0x3FFFFFFFFFFFFFLL);  /* 50 bits */
+            } else {
+                /* JMP/CALL label format */
+                int64_t offset = 0;
+                if (instr->operands[instr->operand_count - 1].type == OPERAND_LABEL) {
+                    uint64_t label_addr;
+                    if (symbol_table_lookup(symbols, instr->operands[instr->operand_count - 1].value.label, &label_addr)) {
+                        offset = (int64_t)(label_addr - (pc + 8)) / 8;  /* PC-relative */
+                    }
+                }
+                encoded |= ((uint64_t)offset & 0x1FFFFFFFFFFFFFFLL);  /* 57 bits */
             }
-            
-            encoded |= ((uint64_t)offset & 0x1FFFFFFFFFFFFFFLL);
             break;
         }
         
         case FORMAT_S: {
             /* opcode(7) | func(8) | imm(49) */
-            /* For system instructions, just encode as-is for now */
+            /* Function field is typically the second operand for system instructions */
+            /* For now, just store immediate if present */
+            if (instr->operand_count > 0 && instr->operands[0].type == OPERAND_IMM) {
+                int64_t imm = instr->operands[0].value.immediate;
+                encoded |= ((uint64_t)imm & 0x1FFFFFFFFFFFFFFLL);  /* 49 bits in lower portion */
+            }
             break;
         }
         
         case FORMAT_F: {
             /* opcode(7) | Fd(5) | Fs1(5) | Fs2(5) | Func(5) | reserved(28) */
             uint8_t fd = instr->operands[0].value.reg;
-            uint8_t fs1 = instr->operands[1].value.reg;
-            uint8_t fs2 = instr->operands[2].value.reg;
+            uint8_t fs1 = (instr->operand_count > 1) ? instr->operands[1].value.reg : 0;
+            uint8_t fs2 = (instr->operand_count > 2) ? instr->operands[2].value.reg : 0;
             encoded |= ((uint64_t)fd & 0x1F) << 52;
             encoded |= ((uint64_t)fs1 & 0x1F) << 47;
             encoded |= ((uint64_t)fs2 & 0x1F) << 42;

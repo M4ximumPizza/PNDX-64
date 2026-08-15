@@ -2,12 +2,12 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O2 -std=c99
 LDFLAGS = -lm
 
-TARGET = pndx64
+TARGET = assembler
 
 SRC_DIR = src
 TEST_DIR = test
 
-SOURCES = $(SRC_DIR)/assembler.c $(SRC_DIR)/main.c
+SOURCES = $(SRC_DIR)/pndx64-asm.c $(SRC_DIR)/assembler.c
 HEADERS = $(SRC_DIR)/common.h
 OBJECTS = $(SOURCES:.c=.o)
 
