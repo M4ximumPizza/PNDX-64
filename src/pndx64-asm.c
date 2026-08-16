@@ -464,15 +464,62 @@ void disassemble_instruction(uint64_t encoded, uint64_t address) {
         }
         
         case FORMAT_J: {
-            int64_t offset = (int64_t)(encoded & 0x1FFFFFFFFFFFFFFLL);
-            if (offset & 0x100000000000000LL) offset |= 0xFE00000000000000LL;  /* Sign extend */
-            uint64_t target = address + (offset * 8) + 8;
-            printf("0x%lx", target);
+            if (strcasecmp(def->mnemonic, "JAL") == 0) {
+                /*
+                 * JAL:
+                 *   opcode (7) | Rd (5) | offset (52)
+                 */
+                uint8_t rd = (encoded >> 52) & 0x1F;
+
+                int64_t offset = encoded & 0x000FFFFFFFFFFFFFULL;
+
+                /* Sign-extend 52-bit offset */
+                if (offset & (1LL << 51))
+                    offset |= 0xFFF0000000000000LL;
+
+                uint64_t target = address + (offset * 8) + 8;
+
+                printf("R%d, 0x%016lx", rd, target);
+            } else {
+                /*
+                 * JMP:
+                 *   opcode (7) | offset (57)
+                 */
+                int64_t offset = encoded & 0x01FFFFFFFFFFFFFFULL;
+
+                /* Sign-extend 57-bit offset */
+                if (offset & (1LL << 56))
+                    offset |= 0xFE00000000000000LL;
+
+                uint64_t target = address + (offset * 8) + 8;
+
+                printf("0x%016lx", target);
+            }
+
             break;
         }
-        
-        case FORMAT_S:
+
+        case FORMAT_S: {
+            /*
+             * S-format:
+             *   opcode (7) | func (8) | immediate (49)
+             */
+            int64_t imm = encoded & 0x1FFFFFFFFFFFFULL;
+
+            /* Sign-extend 49-bit immediate */
+            if (imm & (1LL << 48))
+                imm |= 0xFFFFE00000000000LL;
+
+            if (def->operand_count > 0)
+                printf("%ld", imm);
+
+            break;
+        }
+
         case FORMAT_F:
+            printf("(unimplemented F-format)");
+            break;
+
         default:
             printf("(unimplemented format)");
             break;
